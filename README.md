@@ -24,7 +24,7 @@ server {
 
 datacenter = "dc1"
 
-bind_addr = "192.168.1.20"
+bind_addr = "0.0.0.0"
 ' \
     clementd/nomad agent
 ```
