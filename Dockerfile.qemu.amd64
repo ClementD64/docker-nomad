@@ -1,0 +1,60 @@
+FROM amd64/debian:buster-slim
+LABEL maintainer="Clément Dubreuil <hello@clementd.fr>"
+
+# Script created following Hashicorp's model for Consul: 
+# https://github.com/hashicorp/docker-consul/blob/master/0.X/Dockerfile
+# Comments in this file originate from the project above, simply replacing 'Consul' with 'Nomad'.
+
+# This is the release of Nomad to pull in.
+ENV NOMAD_VERSION=0.11.1
+
+# This is the location of the releases.
+ENV HASHICORP_RELEASES=https://releases.hashicorp.com
+
+# Set up certificates, base tools, and Nomad.
+RUN set -eux && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates wget curl dumb-init gnupg openssl unzip qemu-kvm && \
+    gpg --keyserver keyserver.ubuntu.com --recv-keys 91A6E7F85D05C65630BEF18951852D87348FFC4C && \
+    mkdir -p /tmp/build && \
+    cd /tmp/build && \
+    wget ${HASHICORP_RELEASES}/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_linux_amd64.zip && \
+    wget ${HASHICORP_RELEASES}/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_SHA256SUMS && \
+    wget ${HASHICORP_RELEASES}/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_SHA256SUMS.sig && \
+    gpg --batch --verify nomad_${NOMAD_VERSION}_SHA256SUMS.sig nomad_${NOMAD_VERSION}_SHA256SUMS && \
+    grep nomad_${NOMAD_VERSION}_linux_amd64.zip nomad_${NOMAD_VERSION}_SHA256SUMS | sha256sum -c && \
+    unzip -d /bin nomad_${NOMAD_VERSION}_linux_amd64.zip && \
+    cd /tmp && \
+    rm -rf /tmp/build && \
+    apt-get purge gnupg openssl unzip -y && \
+    apt-get autoremove -y && \
+    rm -rf /root/.gnupg && \
+# tiny smoke test to ensure the binary we downloaded runs
+    nomad version && \
+# The /nomad/data dir is used by nomad to store state. The agent will be started
+# with /nomad/config as the configuration directory so you can add additional
+# config files in that location.
+    mkdir -p /nomad/data /nomad/config
+
+# Expose the nomad data directory as a volume since there's mutable state in there.
+VOLUME /nomad/data
+
+# Server RPC is used for communication between Nomad clients and servers for internal
+# request forwarding.
+EXPOSE 4647
+
+# Serf WAN are used by servers to gossip both over the LAN and WAN to other servers.
+# It isn't required that Nomad clients can reach this address.
+EXPOSE 4648 4648/udp
+
+# HTTP are the primary interfaces that applications
+# use to interact with Nomad.
+EXPOSE 4646
+
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+ENTRYPOINT ["docker-entrypoint.sh"]
+
+# By default you'll get an insecure single-node development server that stores
+# everything in RAM, exposes a web UI and HTTP endpoints, and bootstraps itself.
+# Don't use this configuration for production.
+CMD ["agent", "-dev", "-bind", "0.0.0.0"]
