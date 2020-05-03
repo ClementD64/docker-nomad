@@ -1,4 +1,4 @@
-FROM debian:buster-slim
+FROM amd64/debian:buster-slim
 LABEL maintainer="Clément Dubreuil <hello@clementd.fr>"
 
 # Script created following Hashicorp's model for Consul: 
@@ -18,20 +18,12 @@ RUN set -eux && \
     gpg --keyserver keyserver.ubuntu.com --recv-keys 91A6E7F85D05C65630BEF18951852D87348FFC4C && \
     mkdir -p /tmp/build && \
     cd /tmp/build && \
-    arch="$(uname -m)" && \
-    case "${arch}" in \
-        aarch64) nomadArch='arm64' ;; \
-        armhf) nomadArch='armhfv6' ;; \
-        x86) nomadArch='386' ;; \
-        x86_64) nomadArch='amd64' ;; \
-        *) echo >&2 "error: unsupported architecture: ${arch} (see ${HASHICORP_RELEASES}/nomad/${NOMAD_VERSION}/)" && exit 1 ;; \
-    esac && \
-    wget ${HASHICORP_RELEASES}/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_linux_${nomadArch}.zip && \
+    wget ${HASHICORP_RELEASES}/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_linux_amd64.zip && \
     wget ${HASHICORP_RELEASES}/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_SHA256SUMS && \
     wget ${HASHICORP_RELEASES}/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_SHA256SUMS.sig && \
     gpg --batch --verify nomad_${NOMAD_VERSION}_SHA256SUMS.sig nomad_${NOMAD_VERSION}_SHA256SUMS && \
-    grep nomad_${NOMAD_VERSION}_linux_${nomadArch}.zip nomad_${NOMAD_VERSION}_SHA256SUMS | sha256sum -c && \
-    unzip -d /bin nomad_${NOMAD_VERSION}_linux_${nomadArch}.zip && \
+    grep nomad_${NOMAD_VERSION}_linux_amd64.zip nomad_${NOMAD_VERSION}_SHA256SUMS | sha256sum -c && \
+    unzip -d /bin nomad_${NOMAD_VERSION}_linux_amd64.zip && \
     cd /tmp && \
     rm -rf /tmp/build && \
     apt-get purge gnupg openssl unzip -y && \
